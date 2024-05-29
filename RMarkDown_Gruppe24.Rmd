@@ -1,0 +1,432 @@
+---
+title: "RMarkDown_Eksamen"
+author: "Gruppe24"
+date: "2024-05-23"
+output: html_document
+---
+
+
+```{r setup, echo=FALSE, message=FALSE}
+
+
+#dir.create("data")
+#install.packages("tidyverse")
+#install.packages("here")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("ggplot2")
+#install.packages("reader")
+library(tidyverse)
+library(here)
+library("dplyr")
+library(tidyr)
+library("ggplot2")
+library("reader")
+library(leaflet)
+library(readxl)
+
+aarhus_census <- read.csv(here("data_fælles","dataset_clean.csv"))
+```
+
+# Forberedelse af datasættet
+
+Før vi kan begynde at producere nogle visualiseringer til analyse vil vi skabe kolonnen "Erhvervskategori" som vil blive brugt til at gøre vores diagrammer mere overskuelige. Til dette formål bruger vi mutate funktionen til at skabe kolonnen og case_when funktionen til at diktere hvilke erhverv der tilhører hvilke erhvervskategorier.
+
+```{r}
+aarhus_data <- aarhus_census %>%
+mutate(Erhvervskategori = case_when(
+erhverv %in% c("Geheime Raadjnde af Woyda", "Arbeyder i litteratur", "provst", "geheimeråd og stiftamtmand", "Baron, kammerherre og amtmand", "Præste enke", "Baronesse", "Bestyrer", "Grevinde og har 400 Rdr i Enke Pension", "Biskop", "Rådmand", "Betjent", "Billeteur", "Branddirektør", "Hendes Mand har fast Tjeneste", "Skolelærer", "Hospitalsforstander", "Cancellirådinde, - lever af det, hun har", "Candedatus Theologies", "Cappelan", "Consumptionsbetjent", "Contoirbetjent", "Degn", "Dommer", "Informator", "Inspecteur", "Enke Degn", "Enke Provstinde", "Etatsraadinde", "Jurist", "Sognepræst", "Kammerherre", "Kammerråd", "Foged", "Kornmåler", "Formuende", "Forpagter", "Landmaaler", "Lever af Formue", "Lever af sin Formue", "Forvalter", "Fuldmægtig", "stiftsphysicus", "stiftsrevisor", "Student", "Lægdsmand", "Læge", "Ved Landvæsenet", "Marqueur", "Told", "toldkasserer", "Organist") ~ "Embedsmand mm.",
+erhverv%in% c("Apoteker", "Postmester, Kiøb- og Værtshusmusmand, Gæstgiver og prokurator", "Handler", "Brændevinsmand", "Købmand", "Værtshusmand") ~ "Købmand",
+erhverv %in% c("Gartner", "Baber", "Bager", "Bagerenke", "Glarmester", "Rebslager", "Skoflikker", "Skomager", "Skrædder", "Håndværksmager", "Slagter", "Smed", "Snedker", "Kok", "Mester", "Teglbrænder") ~ "Håndværksmester",
+erhverv %in% c("Apotekerdreng", "Assistent", "Garver", "Skoleelev", "Giør Stoele", "Gjørtler", "Blegmand", "Blikkenslager", "Bogbinder", "Byens tambour", "Bødker", "Hugger", "I Lære", "Drejer", "Farver", "Favn Brænde Kiøer", "Mahler og Gartner", "Tømrer", "Svend") ~ "Svend eller i Lære",
+erhverv %in% c( "Gadekører", "Hjulmand", "klubvært", "Kromand", "Kudsk", "Forridder", "Vognmand", "Opvarterske for de syge") ~ "Avls- vogn, værtsmand",
+erhverv %in% c("Skipper", "Fiskemester ved grevskabet Frijsenborg", "Fisker", "Lods", "Matros") ~ "Skipper, jæger, fisker",
+erhverv %in% c("Graver", "Arbejder ved Canalen", "Går med bagerkurven", "Spinder", "Rådstuebud", "Baademand", "Skovridder", "Hyrde", "Høker", "Skærsliber", "Jordemoder", "Examineret Foster Moder", "Kalkslager", "Klokker", "Stadsmusikant", "Krambodsdreng", "Stenkløver og -hugger, beboer et Markhuus, er Landeværnsmand", "Lever af at stampe Vadmel", "Fostermoder", "Stenpikker", "Lever af sit Arbejde", "Faar Løn", "strømpevæver", "Væver", "Vægter", "Volunteur", "Læser for Børn i Byen", "strøekone ved Domkirken", "Vaskekone", "Substitut", "Syerske", "Mejerske", "Tærsker", "Træskomand", "Natmand", "Trykker", "Tobaksspinder", "Nærer sig ved Haandarbejde") ~ "Ufaglært arbejder",
+erhverv %in% c("General Krigs Commisair, Rigs-Greve", "Skytte", "Rytter", "Soldat", "fhv. militærmand med årlig pension", "Overordnet Soldat") ~ "Militærperson",
+erhverv %in% c("Afskediget", "Antagen til opdragelse", "Besvangret", "Enke", "Fattig", "formedels sin solgte gaard", "Ledig", "Lever af sine midler", "Opdrages i huset") ~ "Uden erhverv",
+erhverv %in% c("Rygter paa Gersdorrslund", "Huusholderske", "Stuekone", "Tyende", "Tjener Familie") ~ "Tyende",
+erhverv %in% c("Aftægtsfolk", "Pension", "Frit underholdt", "Logerende", "Understøtter Familiemedlem", "Understøttelse af Private", "Understøttelse af Familie", "nyder Ophold", "nyder Ophold af gaarden") ~ "Aftægtsfolk/pensioneret",
+erhverv %in% c("Proprietair", "Har en Mølle i Fæste", "Boelsmand", "Bonde og Gaardbeboer", "Huusmand", "Huusmand med Jord", "Huusmand og andet Erhverv", "Enke med Jord", "Stamherre", "Møller") ~ "Bonde med jord",
+erhverv %in% c("Daglejer", "Inderste", "Jordløs Huusmand") ~ "Bonde uden jord",
+erhverv %in% c("Hospitalslem", "Vanvittig","Vanfør") ~ "Syg og vanfør",
+erhverv %in% c("Tigger") ~ "Tigger",
+erhverv %in% c("Nyder Almisse") ~ "Almissemodtager",
+
+famstand%in% c("Tyende") ~ "Tyende",
+grepl("opholds", famstand) ~ "Aftægtsfolk/pensioneret",
+grepl("Opholds", famstand) ~ "Aftægtsfolk/pensioneret",
+
+
+TRUE ~ "Ukendt"
+
+))
+```
+I datasættet er mange kvinder på landet efterladt blanke i "erhverv" kolonnen. I perioden var det ofte indforstået at kvindes erhverv på landet var knyttet til hendes husbond. Derfor sørger vi også for at alle kvinder med værdien "Hans Kone" i "famstand" kolonnen automatisk får samme værdi i "Erhvervskategori" som sin ovenstående husbond, såfremt denne værdi enten er "Bonde med jord" eller "Bonde uden jord".
+
+```{r}
+for (i in 2:nrow(aarhus_data)) {
+  if(aarhus_data$famstand[i] == "Hans Kone"
+     && aarhus_data$Erhvervskategori[i-1]== "Bonde med jord"){
+  aarhus_data$Erhvervskategori[i]<- 
+    paste(aarhus_data$Erhvervskategori[i-1])
+  }
+  }
+
+for (i in 2:nrow(aarhus_data)) {
+  if(aarhus_data$famstand[i] == "Hans Kone"
+     && aarhus_data$Erhvervskategori[i-1]== "Bonde uden jord"){
+  aarhus_data$Erhvervskategori[i]<- 
+    paste(aarhus_data$Erhvervskategori[i-1])
+  }
+  }
+```
+
+# Stabelsøjlediagrammer med procentfordeling af køn og civilstand over erhvervskategorier
+
+Nu hvor vores "Erhvervskategori" kolonne er klar kan vi begynde på visualiseringer. Først vil vi gerne se hvordan procentfordelingen er mellem kønnene i forskellige erhvervsgrupper. For at gøre dette bliver vi nød til at lave en ny dataframe, "procent_køn_erhverv", hvor vi inkluderer "koen" og "Erhvervskategori" kolonnerne og ud fra disse muterer vi en ny kolonne, "koen_procent", som inkluderer procentfordelingen. Nu kan vi bruge ggplot pakken og "procent_køn_erhverv" dataframen til at skabe et stabelsøjlediagram med procentfordelingen af køn på tværs af erhvervskategorier.
+
+
+```{r}
+procent_køn_erhverv <- aarhus_data %>%
+  filter(koen != "") %>% 
+  count(koen, Erhvervskategori) %>% 
+  group_by(Erhvervskategori) %>% 
+  mutate(koen_procent = (n/sum(n))*100)
+   
+procent_køn_erhverv %>% 
+  ggplot(aes(x = Erhvervskategori, y = koen_procent, fill = koen)) +
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+  scale_fill_manual(values = c("dodgerblue", "orange")) + 
+  labs(title = "Procentfordeling af køn i erhvervskategorier",
+       fill = "Køn",
+       x = "Erhvervskategori",
+       y = "Procent")
+```
+
+Ligeledes vil vi gerne have en magen til visualisering bare med procentfordeling af civilstand i stedet for køn over erhvervskategorier. Samme metode som ved ovenstående visualisering bliver brugt bare hvor "koen" overalt i koden erstattes af "civilstand"
+
+```{r}
+procent_civilstand_erhverv <- aarhus_data %>% 
+  filter(civilstand != "") %>% 
+  count(civilstand, Erhvervskategori) %>% 
+  group_by(Erhvervskategori) %>% 
+  mutate(civilstand_procent = (n/sum(n))*100)
+
+procent_civilstand_erhverv %>% 
+  ggplot(aes(x = Erhvervskategori, y = civilstand_procent, fill = civilstand)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+  scale_fill_manual(values = c("tomato", "orange", "green3", "yellow", "purple", "dodgerblue")) +
+  labs(title = "Procentfordeling af civilstand i erhvervskategorier",
+       fill = "Civilstand",
+       x = "Erhvervskategori",
+       y = "Procent")  
+
+```
+
+# Søjlediagrammer med fattige
+
+I første omgang vil vi gerne lave en graf, der viser fordelingen af de forskellige erhvervskategorier, så vi også kan se fordelingen i de kategorier, hvor vi har vurderet, at de fattige befinder sig:
+
+```{r}
+
+count_data <- aarhus_data %>% 
+  group_by(Erhvervskategori) %>% 
+  summarise(count=n())
+
+count_data <- count_data %>% 
+  mutate(percentage=count/sum(count)*100)
+
+ggplot(count_data,aes(x=Erhvervskategori,y = percentage))+
+  geom_bar(stat = "identity")+
+  geom_text(aes(label = round(percentage,1)), vjust=-0.5)+
+  theme(axis.text = element_text(angle = -90),plot.margin = margin(0,20,-15,20))+
+  labs(y="Procent",title = "Fordelingen af erhvervskategorier i procent")
+
+
+```
+
+Fordeling af respondenter på tværs af sogn:
+```{r}
+ggplot(aarhus_data,aes(sogn))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+   labs(title = "Fordeling af respondenter på tværs af sogn",y="Antal respondenter")
+```
+
+
+
+Vi vil gerne kigge bl.a. på alderen, cvilstanden og den geografiske placering for  forskellige erhverv af fattige:
+Tyende, Syg og vanfør, Bonde uden jord, Tiggere, Almissemodtager og Aftægtsfolk/pensioneret.
+
+Vi starter med at lave et nyt dataset, hvor vi isolerer erhvervskategorien "Tyende" fra aarhus_data. Derefter laver vi to søjlediagrammer for de tyende fra datasættet. Det første viser fordelingen i tyendes alder og det andet viser de tyendes geografiske placering fordelt på sogn.
+
+```{r}
+Tyende_data <- filter(aarhus_data,Erhvervskategori=="Tyende")
+
+#Alder og civilstand
+ggplot(Tyende_data,aes(alder))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+   labs(title = "Tyendes fordeling i alder",y="Antal tyende")
+
+#Geografisk placering og køn
+ggplot(Tyende_data,aes(sogn))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+   labs(title = "Tyendes fordeling i sogn",y="Antal tyende")
+    
+```
+
+
+Vi gør det samme med den anden store kategori af fattige: Bønder uden jord: 
+
+```{r}
+Bonde_u_jord <- filter(aarhus_data,Erhvervskategori=="Bonde uden jord")
+#Alder
+ggplot(Bonde_u_jord,aes(alder))+
+  geom_bar()+
+theme(axis.text = element_text(angle = -90))+
+  labs(title = "Bønder uden jords fordeling i alder",y="Antal bønder uden jord")
+#Geografisk placering
+ggplot(Bonde_u_jord,aes(sogn))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+  labs(title = "Bønder uden jords fordeling i sogn",y="Antal bønder uden jord")
+```
+
+
+Vi kigger også på at par andre af erhvervskategorierneSyge og vanføre: Her er det også interessant at kigge på "erhverv," for at sammenligne de to grupper "vanvittig" og "hospitalsem", som falder ind under overkaterogiseringen:
+
+
+```{r}
+Sygogvanfør_data <- filter(aarhus_data,Erhvervskategori=="Syg og vanfør")
+#Alder og erhverv
+ggplot(Sygogvanfør_data,aes(alder))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+   labs(title = "Syge og vanføres fordeling i alder",y="Antal syge og vanføre")
+#Geografisk placering og erhverv
+ggplot(Sygogvanfør_data,aes(sogn))+
+  geom_bar(aes(fill = erhverv))+
+  theme(axis.text = element_text(angle = -90))+
+  labs(title = "Syge og vanføres fordeling i sogn og erhverv",y="Antal syge og vanføre")
+```
+
+Almissemodtagere:
+
+```{r}
+Almissemodtager_data <- filter(aarhus_data,Erhvervskategori=="Almissemodtager")
+#Alder 
+ggplot(Almissemodtager_data,aes(alder))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+  labs(title = "Almissemodtageres fordeling i alder",y="Antal almissemodtagere")
+
+#Geografisk placering
+ggplot(Almissemodtager_data,aes(sogn))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+  labs(title = "Almissemodtageres fordeling i sogn",y="Antal almissemodtagere")
+```
+
+Aftægtsfolk/pensionerede:
+
+```{r}
+Aftægt_data <- filter(aarhus_data,Erhvervskategori=="Aftægtsfolk/pensioneret")
+#Alder
+ggplot(Aftægt_data,aes(alder))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+  labs(title = "Aftægtsfolk/pensioneredes fordeling i alder",y="Antal aftægtsfolk/pensionerede")
+
+#Geografisk placering
+ggplot(Aftægt_data,aes(sogn))+
+  geom_bar()+
+  theme(axis.text = element_text(angle = -90))+
+  labs(title = "Aftægtsfolk/pensioneredes fordeling i sogn",y="Antal aftægtsfolk/pensionerede")
+```
+
+# Forberedelse til at lave kort
+
+Vi kunne godt tænke os at lave et interraktivt kort hvor man på ved at klikke på popups ved de forskellige sogn kan se et søjlediagram med procentfordelingen af erhvervskategorier i det pågældende sogn. For at gøre det bliver vi nød til at have koordinater for alle 113 sogn som forekommer i datasættet. Derfor lavede vi en excel-fil med tre kolonner: "sogn", "latitude" og "longitude". Vi hentede koordinater for alle de gamle sognekirker på google maps og tastede dem ind i denne excel-fil og lagde den så ind i vores datamappe i Rmd-filen. Fra denne excel-fil lavede vi dataframen "Koordinater" hvor "latitude" og "longitude" kolonnerne også blev konverteret til numeriske værdier. Derudover lavede vi endnu en dataframe "Aarhus_data_K", magen til "aarhus_data". Ved hjælp af left_join funktionen kunne vi indsætte de rigtige "latitude" og "longitude" kolonnerne fra "Koordinater" ind i "Aarhus_data_K" ud for de rigtige sogn. 
+
+```{r, warning=FALSE}
+Koordinater <- readxl::read_excel (here("data_fælles","Sogn_koordinater_1.xlsx"),                                      col_types = c("text", "numeric", "numeric"))
+
+
+Aarhus_data_K <- aarhus_data
+Aarhus_data_K <-  left_join(aarhus_data, Koordinater, by = "sogn")
+```
+
+# Data til popups bliver skabt
+
+Nu indlæser vi koordinaterne til hvert sogn som vores popups på kortet skal have. Hertil tilføjer vi kolonnen "content_popup" som fortæller navnet på sognet som skal forekomme i popup'en
+
+```{r}
+Koordinater <- Koordinater %>% 
+  mutate(content_popup= paste0("<h1>", sogn, "</h1> TEKST")) 
+  
+```
+
+Her vises et eksempel på hvordan vi danner et søjlediagram der viser procentfordelingen af erhvervskategorier for et sogn. I dette eksempel er sognet Alrø. Først dannes en ny dataframe, "procent_alrø_erhverv" som kun inkluderer de observationer fra "aarhus_data" med Alrø som sogn og kun har "Erhvervskategori" som yderligere kolonne.
+
+Denne dataframe bruges så til at lave endnu en dataframe, "procent_alrø_erhverv" hvor vi udregner procentfordelingen for erhverv i Alrø og runder procentværdien til 2 decimaler.
+
+Denne dataframe bruges så til at lave diagrammet med procentfordelingen ved hjælp af ggplot pakken. Herefter gemmes denne visualisering som .png-fil i vores "graphics" mappe i Rmd-filen.
+
+```{r}
+
+procent_alrø_erhverv <- aarhus_data %>% 
+  filter(sogn == "Alrø") %>% 
+  count(sogn, Erhvervskategori) %>% 
+  group_by(Erhvervskategori)
+  
+procent_alrø_erhverv <- procent_alrø_erhverv %>%   
+  mutate(alrø_procent = (n/sum(procent_alrø_erhverv$n))*100, round(alrø_procent, digits = 2))
+
+#gem grafen som png
+alroe_erhverv_graf <- procent_alrø_erhverv %>% 
+  ggplot(aes(x = Erhvervskategori, y = alrø_procent)) + 
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(alrø_procent, digits = 2), vjust = -0.4)) + 
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+  labs(title = "Procentfordeling af erhverv i Alrø Sogn",
+       x = "Erhvervskategori",
+       y = "Procent") 
+
+ggsave(alroe_erhverv_graf, filename = "graphics/sogn_graphics/alroe.png", device = png, width = 20, height = 15, units = "cm" )
+```
+
+Før vi kan forsøge at standardiserer denne kode til at kunne køre automatisk ved alle sogn bliver vi nød til at ændre værdierne i nogle problematiske celler i "sogn" kolonnen i "Koordinater" dataframen. Dette gør vi så de kan læses af koden nedenunder.
+
+```{r}
+Koordinater[112,1] <- "Århus Købstad"
+
+Koordinater[72,1] <-  "Skanderborg Købstad"
+```
+
+# forlooping over 113 parishes
+
+Nu bruger vi forlooping funktionen til at lave et standardiseret stykke kode til at skabe diagram til alle sogn. Her bruges "parish" som placeholder for det pågældende sogn som forloopingen skal lave et diagram til.
+
+For at vi kan knytte sognene som de skal stå i diagrammerne til sognenavnene som de skal forekomme i diagrammerne. For at gøre dette laver vi først en dataframe, "parish_filename_relation", med en kolonne til filnavnformatet (små bogstaver og ingen danske tegn) og standardnavnformatet (Store forbogstaver og danske tegn).
+
+Koden fungerer nøjagtig ligesom det ovenstående eksempel med Alrø, udover at paste funktionen nogle steder bliver benyttet til automatisk at indsætte det relevante sognenavn eksempelvis når titlen på diagrammet skal dannes eller filnavnet på den .png-filen bestemmes.
+
+Derudover har vi også brugt str_replace- og regex funktionerne til at erstatte alle danske symboler med internationale symboler og omdanne alle store bogstaver til små bogstaver når filnavnene på de printede billeder dannes.
+
+```{r, message=FALSE, warning=FALSE}
+
+parish_filename_relation <- tibble(sogn = character(), fil = character())
+
+ 
+
+for (parish in Koordinater$sogn) {
+
+  print(parish)
+
+  procent_erhverv_sogn <- aarhus_data %>%
+
+  filter(sogn == parish) %>%
+
+  count(sogn, Erhvervskategori) %>%
+
+  group_by(Erhvervskategori)
+
+ 
+
+  procent_erhverv_sogn <- procent_erhverv_sogn %>%  
+
+  mutate(sogn_procent = (n/sum(procent_erhverv_sogn$n))*100, round(sogn_procent, digits = 2))
+
+ 
+
+  sogn_erhverv_graf <- procent_erhverv_sogn %>%
+
+  ggplot(aes(x = Erhvervskategori, y = sogn_procent)) +
+
+  geom_bar(stat = "identity") +
+
+  geom_text(aes(label = round(sogn_procent, digits = 2), vjust = -0.4)) +
+
+  theme(axis.text.x = element_text(angle = -45, hjust = 0)) +
+
+  labs(title = paste0("Procentfordeling af erhverv i ", parish, " sogn"),
+
+       x = "Erhvervskategori",
+
+       y = "Procent")
+
+  
+
+  filename_parish <- str_replace(parish, regex("Å", ignore_case = TRUE), "aa") %>%
+
+    str_replace(regex("Ø", ignore_case = TRUE), "oe") %>%
+
+    str_replace(regex("Æ", ignore_case = TRUE), "ae") %>%
+
+    str_replace(regex(" ", ignore_case = TRUE), "_") %>%
+
+    str_to_lower()
+
+   
+
+print(filename_parish) 
+
+ 
+
+parish_filename_relation <- parish_filename_relation %>%
+
+  add_row(sogn = parish, fil = filename_parish)
+
+ 
+
+  ggsave(sogn_erhverv_graf, filename = paste0("graphics/sogn_graphics/", filename_parish, ".png"), device = png, width = 20, height = 15, units = "cm" )
+
+}
+
+ 
+
+```
+
+Vi tilføjer de rigtige grafer til de rigtige sogn/koordinater ved hjælp af "parish_filename_relation" dataframen som vi skabte i det ovenstående kode.
+
+```{r}
+
+Koordinater <- Koordinater %>%
+
+  left_join(parish_filename_relation, by = "sogn")
+
+```
+
+Vi tilføjer endnu en kolonne, "img_link" til "Koordinater" dataframen med links til hvert sogns diagram på github 
+
+```{r}
+
+Koordinater <- Koordinater %>%
+
+  mutate(img_link = paste0("https://github.com/HelenaKragh/Eksamen-DAM-Gruppe-24/blob/main/eksamens%20projekt/graphics/sogn_graphics/", fil, ".png?raw=true"))
+
+```
+
+ Vi ændrer nu på den tidligere skabte kolonne "content_popup" som bestemmer indholdet i de popups som skal forekomme på vores kort. Nu inkluderer den også link til diagrammet som skal vises ved popup'en ved hjælp af "img_link" kolonnen som vi skabte i chunken ovenfor
+
+```{r}
+
+Koordinater <- Koordinater %>%
+
+  mutate(content_popup= paste0("<h1>", sogn, "</h1> Diagram", '<br>', '<a href="', img_link, '">', '<img src="', img_link,'" width="600">', '</a> <br>'))
+
+```
+
+Og til sidst kan vi med leaflet funktionen skabe kortet med popups til alle sogn og med alle tilhørende søjlediagrammer vedhæftet. Vi kan nu let se hvordan erhvervsfordelingen har set ud for et pågældende sogn i Aarhus Amt.
+
+```{r}
+Koordinater %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(~longitude,~latitude,
+             popup = ~content_popup)
+```
